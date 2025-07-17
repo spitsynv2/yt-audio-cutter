@@ -9,9 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/spitsynv2/yt-audio-cutter/internal/model"
+	"github.com/spitsynv2/yt-audio-cutter/internal/service"
+	"github.com/spitsynv2/yt-audio-cutter/internal/store"
 )
 
-var inMemoryJobs = make(map[string]model.Job) // temporary in-memory storage
+var inMemoryStore = &store.MemoryJobStore{Jobs: make(map[string]model.Job)}
 
 func GetStartPage(c *gin.Context) {
 	endpoints := []struct {
@@ -52,7 +54,8 @@ func CreateJob(c *gin.Context) {
 		CreatedAt:  time.Now(),
 	}
 
-	inMemoryJobs[jobID] = newJob
+	inMemoryStore.PutJob(newJob)
+	service.ProcessJob(jobID, inMemoryStore)
 
 	c.JSON(http.StatusCreated, gin.H{"id": jobID})
 }
@@ -60,7 +63,7 @@ func CreateJob(c *gin.Context) {
 func GetJobById(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryJobs[id]
+	job, exists := inMemoryStore.GetJob(id)
 
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
@@ -71,9 +74,9 @@ func GetJobById(c *gin.Context) {
 }
 
 func GetJobs(c *gin.Context) {
-	var jobs = make([]model.Job, 0, len(inMemoryJobs))
+	var jobs = make([]model.Job, 0, len(inMemoryStore.Jobs))
 
-	for _, job := range inMemoryJobs {
+	for _, job := range inMemoryStore.Jobs {
 		jobs = append(jobs, job)
 	}
 
@@ -83,7 +86,7 @@ func GetJobs(c *gin.Context) {
 func UpdateJob(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryJobs[id]
+	job, exists := inMemoryStore.GetJob(id)
 
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
@@ -107,15 +110,14 @@ func UpdateJob(c *gin.Context) {
 
 	job.StartTime = updateInput.StartTime
 	job.EndTime = updateInput.EndTime
-	inMemoryJobs[id] = job
-
+	inMemoryStore.Update(id, job)
 	c.JSON(http.StatusOK, job)
 }
 
 func DeleteJob(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryJobs[id]
+	job, exists := inMemoryStore.GetJob(id)
 
 	if !exists {
 		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
@@ -127,6 +129,6 @@ func DeleteJob(c *gin.Context) {
 		return
 	}
 
-	delete(inMemoryJobs, id)
+	inMemoryStore.DeleteJob(id)
 	c.Status(http.StatusNoContent)
 }

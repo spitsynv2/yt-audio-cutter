@@ -6,9 +6,9 @@ services:
     container_name: my_postgres
     restart: always
     environment:
-      POSTGRES_DB: mydb
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: pg
+      POSTGRES_USER: yt
+      POSTGRES_PASSWORD: ytpass
     ports:
       - "5432:5432"
     volumes:
@@ -17,3 +17,4 @@ services:
 
 volumes:
   pgdata:
+  yt_files:  # defined here for app, not used by db
