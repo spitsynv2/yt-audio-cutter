@@ -1,6 +1,11 @@
 package model
 
 import (
+	"database/sql/driver"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -15,7 +20,7 @@ const (
 )
 
 type Job struct {
-	ID         string    `json:"id"`
+	Id         string    `json:"id"`
 	YoutubeURL string    `json:"youtube_url" binding:"required,url"`
 	StartTime  *Duration `json:"start_time" binding:"required"` // e.g. "10s"
 	EndTime    *Duration `json:"end_time" binding:"required"`
@@ -27,12 +32,63 @@ type Duration struct {
 	time.Duration
 }
 
+func (d Duration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
+
 func (d *Duration) UnmarshalJSON(b []byte) error {
-	s := strings.Trim(string(b), `"`)
-	duration, err := time.ParseDuration(s)
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	dur, err := time.ParseDuration(s)
 	if err != nil {
 		return err
 	}
-	d.Duration = duration
+	d.Duration = dur
 	return nil
+}
+
+func (d *Duration) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	case int64:
+		d.Duration = time.Duration(v) * time.Second
+		return nil
+	default:
+		return fmt.Errorf("unsupported type %T for Duration", v)
+	}
+
+	if dur, err := time.ParseDuration(s); err == nil {
+		d.Duration = dur
+		return nil
+	}
+
+	parts := strings.Split(s, ":")
+	if len(parts) == 3 {
+		h, _ := strconv.Atoi(parts[0])
+		m, _ := strconv.Atoi(parts[1])
+		sec, _ := strconv.ParseFloat(parts[2], 64)
+
+		total := time.Duration(h)*time.Hour +
+			time.Duration(m)*time.Minute +
+			time.Duration(sec*float64(time.Second))
+
+		d.Duration = total
+		return nil
+	}
+
+	return errors.New("invalid duration format: " + s)
+}
+
+func (d Duration) Value() (driver.Value, error) {
+	return d.Duration.String(), nil
 }

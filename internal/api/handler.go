@@ -1,19 +1,35 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 
+	"context"
+	"errors"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/spitsynv2/yt-audio-cutter/internal/model"
-	"github.com/spitsynv2/yt-audio-cutter/internal/service"
 	"github.com/spitsynv2/yt-audio-cutter/internal/store"
 )
 
-var inMemoryStore = &store.MemoryJobStore{Jobs: make(map[string]model.Job)}
+func TimeoutMiddleware(d time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), d)
+		defer cancel()
+
+		c.Request = c.Request.WithContext(ctx)
+
+		c.Next()
+
+		if ctx.Err() == context.DeadlineExceeded {
+			c.JSON(http.StatusGatewayTimeout, gin.H{"error": "request timed out"})
+			c.Abort()
+		}
+	}
+}
 
 func GetStartPage(c *gin.Context) {
 	endpoints := []struct {
@@ -43,10 +59,9 @@ func CreateJob(c *gin.Context) {
 		return
 	}
 
-	// Generate job
 	jobID := uuid.NewString()
 	newJob := model.Job{
-		ID:         jobID,
+		Id:         jobID,
 		YoutubeURL: jobInput.YoutubeURL,
 		StartTime:  jobInput.StartTime,
 		EndTime:    jobInput.EndTime,
@@ -54,8 +69,11 @@ func CreateJob(c *gin.Context) {
 		CreatedAt:  time.Now(),
 	}
 
-	inMemoryStore.PutJob(newJob)
-	service.ProcessJob(jobID, inMemoryStore)
+	_, err := store.CreateJob(c.Request.Context(), newJob)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Job creation error: %s", err)
+		return
+	}
 
 	c.JSON(http.StatusCreated, gin.H{"id": jobID})
 }
@@ -63,10 +81,13 @@ func CreateJob(c *gin.Context) {
 func GetJobById(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryStore.GetJob(id)
-
-	if !exists {
+	job, err := store.GetJob(c.Request.Context(), id)
+	if errors.Is(err, sql.ErrNoRows) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -74,10 +95,15 @@ func GetJobById(c *gin.Context) {
 }
 
 func GetJobs(c *gin.Context) {
-	var jobs = make([]model.Job, 0, len(inMemoryStore.Jobs))
 
-	for _, job := range inMemoryStore.Jobs {
-		jobs = append(jobs, job)
+	jobs, err := store.GetJobs(c.Request.Context())
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.JSON(http.StatusOK, jobs)
@@ -86,15 +112,14 @@ func GetJobs(c *gin.Context) {
 func UpdateJob(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryStore.GetJob(id)
-
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+	job, err := store.GetJob(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err})
 		return
 	}
 
 	if job.Status != model.StatusPending {
-		c.JSON(http.StatusConflict, gin.H{"error": "cannot apdate not pending jobs"})
+		c.JSON(http.StatusConflict, gin.H{"error": "cannot apdate active jobs"})
 		return
 	}
 
@@ -110,17 +135,22 @@ func UpdateJob(c *gin.Context) {
 
 	job.StartTime = updateInput.StartTime
 	job.EndTime = updateInput.EndTime
-	inMemoryStore.Update(id, job)
+
+	_, err = store.UpdateJob(c.Request.Context(), job)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusOK, job)
 }
 
 func DeleteJob(c *gin.Context) {
 	id := c.Param("id")
 
-	job, exists := inMemoryStore.GetJob(id)
-
-	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+	job, err := store.GetJob(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"No such job error": err})
 		return
 	}
 
@@ -129,6 +159,11 @@ func DeleteJob(c *gin.Context) {
 		return
 	}
 
-	inMemoryStore.DeleteJob(id)
-	c.Status(http.StatusNoContent)
+	_, err = store.DeleteJob(c.Request.Context(), job.Id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

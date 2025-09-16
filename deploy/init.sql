@@ -13,13 +13,13 @@ CREATE TABLE IF NOT EXISTS yt_convertor.jobs (
 
 CREATE TABLE IF NOT EXISTS yt_convertor.files (
     id TEXT PRIMARY KEY,
-    task_id TEXT NOT NULL,
+    job_id TEXT NOT NULL,
     file_url TEXT NOT NULL,
     file_size BIGINT NOT NULL,  -- size in bytes
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT fk_task
-      FOREIGN KEY (task_id)
+      FOREIGN KEY (job_id)
       REFERENCES yt_convertor.jobs(id)
       ON DELETE CASCADE
 );
