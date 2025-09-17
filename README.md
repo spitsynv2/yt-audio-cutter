@@ -6,7 +6,7 @@
 ### Usage
 Create job
 
-POST http://localhost:8080/jobs
+POST http://localhost:8080/jobs </br>
 {</br>
   "name": "Rick", </br>
   "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",</br>
@@ -28,4 +28,5 @@ Process job
 
 GET http://localhost:8080/jobs/process/id </br>
 Response: dropbox download url for your cutted mp3
+
 
