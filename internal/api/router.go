@@ -12,6 +12,7 @@ func RegisterRoutes(router *gin.Engine) {
 
 	router.POST("/jobs", CreateJob)
 	router.GET("/jobs/:id", GetJobById)
+	router.GET("/jobs/process/:id", ProcessJobId)
 	router.GET("/jobs", GetJobs)
 	router.PUT("/jobs/:id", UpdateJob)
 	router.DELETE("/jobs/:id", DeleteJob)

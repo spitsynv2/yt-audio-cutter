@@ -21,11 +21,13 @@ const (
 
 type Job struct {
 	Id         string    `json:"id"`
+	Name       string    `json:"name" binding:"required"`
 	YoutubeURL string    `json:"youtube_url" binding:"required,url"`
 	StartTime  *Duration `json:"start_time" binding:"required"` // e.g. "10s"
 	EndTime    *Duration `json:"end_time" binding:"required"`
 	Status     JobStatus `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
+	FileUrl    string    `json:"file_url"`
 }
 
 type Duration struct {
@@ -91,4 +93,11 @@ func (d *Duration) Scan(value interface{}) error {
 
 func (d Duration) Value() (driver.Value, error) {
 	return d.Duration.String(), nil
+}
+
+func FormatDuration(d time.Duration) string {
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	s := int(d.Seconds()) % 60
+	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }

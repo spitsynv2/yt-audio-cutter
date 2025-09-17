@@ -1,0 +1,45 @@
+# ---- Build stage ----
+FROM golang:latest AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o server ./cmd/server/main.go
+
+# ---- Runtime stage ----
+FROM alpine:3.19
+
+WORKDIR /app
+
+# Install ffmpeg, python3, pip, curl, certs
+RUN apk add --no-cache \
+    ffmpeg \
+    python3 \
+    py3-pip \
+    curl \
+    ca-certificates \
+    bash
+
+# Install yt-dlp (via pip or standalone binary)
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
+-o /usr/local/bin/yt-dlp \
+&& chmod +x /usr/local/bin/yt-dlp
+
+# Copy Go binary + entrypoint script
+COPY --from=builder /app/server .
+COPY ./deploy/entrypoint.server /entrypoint.sh
+
+# Mark entrypoint executable
+RUN chmod +x /entrypoint.sh
+
+# Environment variables
+ENV DB=
+ENV DB_USER=
+ENV DB_PASS=
+ENV DROPBOX_TOKEN=
+
+EXPOSE 8080
+CMD ["/entrypoint.sh"]

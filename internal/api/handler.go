@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/spitsynv2/yt-audio-cutter/internal/model"
+	"github.com/spitsynv2/yt-audio-cutter/internal/service"
 	"github.com/spitsynv2/yt-audio-cutter/internal/store"
 )
 
@@ -62,6 +63,7 @@ func CreateJob(c *gin.Context) {
 	jobID := uuid.NewString()
 	newJob := model.Job{
 		Id:         jobID,
+		Name:       jobInput.Name,
 		YoutubeURL: jobInput.YoutubeURL,
 		StartTime:  jobInput.StartTime,
 		EndTime:    jobInput.EndTime,
@@ -76,6 +78,23 @@ func CreateJob(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"id": jobID})
+}
+
+func ProcessJobId(c *gin.Context) {
+	id := c.Param("id")
+
+	job, err := store.GetJob(c.Request.Context(), id)
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "job not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	url := service.ProcessJob(job)
+	c.JSON(200, gin.H{"Created mp3": url})
 }
 
 func GetJobById(c *gin.Context) {

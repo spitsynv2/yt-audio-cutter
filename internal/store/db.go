@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	createJobsQuery = "INSERT INTO yt_convertor.jobs(id, youtube_url, start_time, end_time, status) VALUES($1, $2, $3, $4, $5)"
-	getJobQuery     = "SELECT id, youtube_url, start_time, end_time, status, created_at FROM yt_convertor.jobs WHERE id=$1"
-	getAllJobsQuery = "SELECT id, youtube_url, start_time, end_time, status, created_at FROM yt_convertor.jobs"
-	updateJobQuery  = "UPDATE yt_convertor.jobs SET youtube_url = $1, start_time = $2, end_time = $3, status = $4 WHERE id = $5"
+	createJobsQuery = "INSERT INTO yt_convertor.jobs(id, name, youtube_url, start_time, end_time, status) VALUES($1, $2, $3, $4, $5, $6)"
+	getJobQuery     = "SELECT id, name, youtube_url, start_time, end_time, status, created_at, COALESCE(file_url, '') AS file_url FROM yt_convertor.jobs WHERE id=$1"
+	getAllJobsQuery = "SELECT id, name, youtube_url, start_time, end_time, status, created_at, COALESCE(file_url, '') AS file_url FROM yt_convertor.jobs"
+	updateJobQuery  = "UPDATE yt_convertor.jobs SET name = $1, youtube_url = $2, start_time = $3, end_time = $4, status = $5, file_url = $6 WHERE id = $7"
 	deleteJobQuery  = "DELETE FROM yt_convertor.jobs WHERE id = $1"
 )
 
@@ -49,7 +49,7 @@ func InitConnection(ctx context.Context) error {
 }
 
 func CreateJob(ctx context.Context, job model.Job) (int64, error) {
-	res, err := DB.ExecContext(ctx, createJobsQuery, job.Id, job.YoutubeURL, job.StartTime, job.EndTime, job.Status)
+	res, err := DB.ExecContext(ctx, createJobsQuery, job.Id, job.Name, job.YoutubeURL, job.StartTime, job.EndTime, job.Status)
 	if err != nil {
 		return 0, err
 	}
@@ -58,7 +58,7 @@ func CreateJob(ctx context.Context, job model.Job) (int64, error) {
 
 func GetJob(ctx context.Context, id string) (model.Job, error) {
 	var job model.Job
-	err := DB.QueryRowContext(ctx, getJobQuery, id).Scan(&job.Id, &job.YoutubeURL, &job.StartTime, &job.EndTime, &job.Status, &job.CreatedAt)
+	err := DB.QueryRowContext(ctx, getJobQuery, id).Scan(&job.Id, &job.Name, &job.YoutubeURL, &job.StartTime, &job.EndTime, &job.Status, &job.CreatedAt, &job.FileUrl)
 	return job, err
 }
 
@@ -72,7 +72,7 @@ func GetJobs(ctx context.Context) ([]model.Job, error) {
 	var jobs []model.Job
 	for rows.Next() {
 		var job model.Job
-		if err := rows.Scan(&job.Id, &job.YoutubeURL, &job.StartTime, &job.EndTime, &job.Status, &job.CreatedAt); err != nil {
+		if err := rows.Scan(&job.Id, &job.Name, &job.YoutubeURL, &job.StartTime, &job.EndTime, &job.Status, &job.CreatedAt, &job.FileUrl); err != nil {
 			return nil, err
 		}
 		jobs = append(jobs, job)
@@ -85,7 +85,7 @@ func GetJobs(ctx context.Context) ([]model.Job, error) {
 }
 
 func UpdateJob(ctx context.Context, job model.Job) (int64, error) {
-	res, err := DB.ExecContext(ctx, updateJobQuery, job.YoutubeURL, job.StartTime, job.EndTime, job.Status, job.Id)
+	res, err := DB.ExecContext(ctx, updateJobQuery, job.Name, job.YoutubeURL, job.StartTime, job.EndTime, job.Status, job.FileUrl, job.Id)
 	if err != nil {
 		return 0, err
 	}

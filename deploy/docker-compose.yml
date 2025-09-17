@@ -1,21 +1,28 @@
-version: '3.8'
-
 services:
-  db:
+  postgres:
     image: postgres:16
     container_name: postgres
     restart: always
     environment:
       POSTGRES_DB: postgres
-      POSTGRES_USER: yt
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - yt_files:/var/lib/postgresql/yt_files
+      
+  app:
+    image: yt-audio-cutter-server:latest
+    container_name: yt-audio-cutter-server
+    restart: always
+    depends_on:
+      - postgres
+    env_file:
+      - server.env
+    ports:
+      - "8080:8080"
 
 volumes:
   pgdata:
-  yt_files:

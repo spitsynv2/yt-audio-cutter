@@ -1,0 +1,19 @@
+#!/bin/sh
+
+CMD_ARGS=
+if [ ! -z ${DB} ]; then
+  CMD_ARGS="${CMD_ARGS} -db ${DB}"
+fi
+if [ ! -z ${DB_USER} ]; then
+  CMD_ARGS="${CMD_ARGS} -db-user ${DB_USER}"
+fi
+if [ ! -z ${DB_PASS} ]; then
+  CMD_ARGS="${CMD_ARGS} -db-pass ${DB_PASS}"
+fi
+if [ ! -z ${DROPBOX_TOKEN} ]; then
+  CMD_ARGS="${CMD_ARGS} -dropbox_token ${DROPBOX_TOKEN}"
+fi
+
+echo "CMD_ARGS:$CMD_ARGS"
+
+./server $CMD_ARGS
