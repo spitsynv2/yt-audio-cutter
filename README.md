@@ -7,11 +7,11 @@
 Create job
 
 POST http://localhost:8080/jobs
-{
-  "name": "Rick", 
-  "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "start_time": "10s",
-  "end_time": "15s"
+{</br>
+  "name": "Rick", </br>
+  "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",</br>
+  "start_time": "10s",</br>
+  "end_time": "15s" </br>
 } </br>
 Response: id
 
@@ -28,3 +28,4 @@ Process job
 
 GET http://localhost:8080/jobs/process/id </br>
 Response: dropbox download url for your cutted mp3
+
