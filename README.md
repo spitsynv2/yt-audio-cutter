@@ -3,7 +3,7 @@
 2. Build image via ./build.sh
 3. Run compose file
 
-### Usage
+### Usage API
 Create job
 
 POST http://localhost:8080/jobs </br>
@@ -29,4 +29,7 @@ Process job
 GET http://localhost:8080/jobs/process/id </br>
 Response: dropbox download url for your cutted mp3
 
-
+### Usage UI
+Navigate http://localhost:8080/
+Create a job, for time use time.Duration format (1h30m15s)
+Copy job Id and paste to process job
