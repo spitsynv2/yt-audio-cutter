@@ -8,7 +8,7 @@ func RegisterRoutes(router *gin.Engine) {
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
-	router.GET("/", GetStartPage)
+	router.StaticFile("/", "./ui/index.html")
 
 	router.POST("/jobs", CreateJob)
 	router.GET("/jobs/:id", GetJobById)
