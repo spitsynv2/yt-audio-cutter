@@ -30,6 +30,7 @@ GET http://localhost:8080/jobs/process/id </br>
 Response: dropbox download url for your cutted mp3
 
 ### Usage UI
-Navigate http://localhost:8080/
-Create a job, for time use time.Duration format (1h30m15s)
-Copy job Id and paste to process job
+Navigate http://localhost:8080/</br>
+Create a job, for time use time.Duration format (1h30m15s)</br>
+Copy job Id and paste to process job</br>
+
